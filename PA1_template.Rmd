@@ -1,0 +1,111 @@
+# Coursera Reproducible Research Week2 Assignment
+  
+## Load libraries
+Load necessary packages.
+```{r packages, echo=TRUE}
+library(dplyr)
+library(ggplot2)
+```
+  
+## Load and clean the data
+This is the data.
+```{r read_data, echo=TRUE}
+data <- read.csv("activity.csv")
+str(data)
+```
+The data variable is a factor.
+Change them into date format.
+```{r clean_data, echo=TRUE}
+data <- data %>% 
+	mutate(date=as.Date(date, "%Y-%m-%d"))
+```
+  
+## Total number of steps taken per day
+Calculate the total number of steps taken per day
+and make a histogram.
+```{r total_hist, echo=TRUE}
+data %>% group_by(date) %>% 
+	summarise(steps = sum(steps, na.rm=TRUE)) %>%
+	ggplot(aes(x=steps)) + 
+	geom_histogram(bins=30) +
+	labs(title="The total number of steps per day") 
+```
+
+Calculate the mean and median of the
+total number of steps taken per day
+```{r total_me, echo=TRUE}
+data %>% group_by(date) %>%
+	summarise(mean_steps = mean(steps, na.rm=TRUE),
+		median_steps = median(steps, na.rm=TRUE)) %>%
+	summary
+```
+  
+## Average daily activity pattern
+Make a time series plot of the 5 minute interval
+and the average number of steps taken
+```{r daily_line, echo=TRUE}
+data %>% group_by(interval) %>%
+	summarise(ave_steps = mean(steps, na.rm=TRUE)) %>%
+	ggplot(aes(x=interval, y=ave_steps)) +
+	geom_line() +
+	labs(title="The average steps of the 5minutes interval")
+```
+
+The interval 835 contains the maximum number of steps.
+```{r daily_head, echo=TRUE}
+data %>% group_by(interval) %>%
+	summarise(ave_steps = mean(steps, na.rm=TRUE)) %>%
+	arrange(desc(ave_steps)) %>% head
+```
+  
+## Impute missing values
+Calculate the total number of missing values in the dataset.
+The step variable has 2303 NAs in 17568 rows.
+```{r missing, echo=TRUE}
+summary(data)
+dim(data)
+```
+Fill in all of the missing values using the mean
+for that 5-minute interval and create a new dataset.
+```{r missing_fill, echo=TRUE}
+newData <- data %>% group_by(interval) %>%
+	mutate(steps=ifelse(is.na(steps), 
+		mean(steps, na.rm=TRUE),steps)) %>%
+	ungroup
+```
+Make a histogram and calculate the mean and median like the
+first assignment. Imputing missing data doesn't impact the
+mean much but changed median of steps. 
+Not the histogram is highly right skewed.
+```{r full_hist, echo=TRUE}
+newData %>% group_by(date) %>%
+	ggplot(aes(x=steps)) +
+	geom_histogram(bins=30) +
+	labs(title="The total number of steps per day2") 
+```
+```{r full_me, echo=TRUE}
+newData %>% group_by(date) %>%
+	summarise(mean_steps = mean(steps),
+		median_steps = median(steps)) %>%
+	summary
+```
+  
+## The differences between weekdays and weekends
+add a new factor variable indicating whether a given
+date is a weekday or weekend day.
+```{r week, echo=TRUE}
+newData <- newData %>%
+	mutate(week=ifelse(weekdays(date)%in%c("Sunday","Saturday"),
+			"weekend", "weekday")) %>%
+	mutate(week=as.factor(week))
+```
+
+Make a panel plot containing a time series plot of the interval
+and the average number ov steps taken
+```{r week_lines, echo=TRUE}
+newData %>% group_by(interval, week) %>%
+	summarise(ave_steps = mean(steps)) %>%
+	ggplot(aes(x=interval, y=ave_steps)) +
+	geom_line(aes(color=week)) +
+	labs(title="The average steps of the 5minutes interval2")
+```
